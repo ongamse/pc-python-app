@@ -33,7 +33,7 @@ jobs:
     - name: Legacy Static Analysis
       run: |
         echo "Please update your `Qwiet-python-GH` fork!"
-        ${GITHUB_WORKSPACE}/sl analyze --strict --wait --no-cpg --app shiftleft-python-demo --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --python $(pwd)
+        ${GITHUB_WORKSPACE}/sl analyze --strict --wait --no-cpg --app Qwiet-python-GH --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --python $(pwd)
       env:
         SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
