@@ -1,20 +1,18 @@
 ---
 # This workflow integrates ShiftLeft NG SAST with GitHub
 # Visit https://docs.shiftleft.io for help
-name: Qwiet
+name: ShiftLeft
 
 on:
   pull_request:
   workflow_dispatch:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron: '0 11 1 * *'
+
 jobs:
   NextGen-Static-Analysis:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
-    - name: Download Qwiet CLI
+    - name: Download ShiftLeft CLI
       run: |
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
     - name: Extract branch name
@@ -24,7 +22,7 @@ jobs:
     - name: NextGen Static Analysis
       run: |
         pip install -r requirements.txt
-        ${GITHUB_WORKSPACE}/sl analyze --strict --wait --app Qwiet-python-GH --container 18fgsa/s3-resource --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --pythonsrc $(pwd)
+        ${GITHUB_WORKSPACE}/sl analyze --strict --wait --app shiftleft-python-demo --container 18fgsa/s3-resource --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --pythonsrc $(pwd)
       env:
         SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
@@ -34,8 +32,8 @@ jobs:
         ${{ hashFiles('requirements.txt') != '' }}
     - name: Legacy Static Analysis
       run: |
-        echo "Please update your `Qwiet-python-GH` fork!"
-        ${GITHUB_WORKSPACE}/sl analyze --strict --wait --no-cpg --app Qwiet-python-GH --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --python $(pwd)
+        echo "Please update your `shiftleft-python-demo` fork!"
+        ${GITHUB_WORKSPACE}/sl analyze --strict --wait --no-cpg --app shiftleft-python-demo --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --python $(pwd)
       env:
         SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
@@ -53,7 +51,7 @@ jobs:
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
     - name: Validate Build Rules
       run: |
-        ${GITHUB_WORKSPACE}/sl check-analysis --app Qwiet-python-GH \
+        ${GITHUB_WORKSPACE}/sl check-analysis --app shiftleft-python-demo \
             --github-pr-number=${{github.event.number}} \
             --github-pr-user=${{ github.repository_owner }} \
             --github-pr-repo=${{ github.event.repository.name }} \
