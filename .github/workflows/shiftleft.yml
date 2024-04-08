@@ -1,7 +1,7 @@
 ---
 # This workflow integrates qwiet.ai preZero with GitHub
 # Visit https://docs.shiftleft.io for help
-name: qwiet.ai
+name: QwietQual
 
 on:
   pull_request:
@@ -22,11 +22,11 @@ jobs:
 
         ${GITHUB_WORKSPACE}/sl --version
         ${GITHUB_WORKSPACE}/sl analyze --strict --wait \
-          --app shiftleft-python-demo \
+          --app Qwiet-python-GH \
           --tag branch=${{ github.head_ref }} \
           --pythonsrc --container 18fgsa/s3-resource $(pwd)
       env:
-        SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
+        SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKENQ }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
         SHIFTLEFT_GRPC_TELEMETRY_HOST: telemetry.shiftleft.io:443
         SHIFTLEFT_GRPC_API_HOST: api.shiftleft.io:443
@@ -42,13 +42,13 @@ jobs:
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
     - name: Validate Build Rules
       run: |
-        ${GITHUB_WORKSPACE}/sl check-analysis --app shiftleft-python-demo \
+        ${GITHUB_WORKSPACE}/sl check-analysis --app Qwiet-python-GH \
             --github-pr-number=${{github.event.number}} \
             --github-pr-user=${{ github.repository_owner }} \
             --github-pr-repo=${{ github.event.repository.name }} \
             --github-token=${{ secrets.GITHUB_TOKEN }}
       env:
-        SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
+        SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKENQ }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
         SHIFTLEFT_GRPC_TELEMETRY_HOST: telemetry.shiftleft.io:443
         SHIFTLEFT_GRPC_API_HOST: api.shiftleft.io:443
