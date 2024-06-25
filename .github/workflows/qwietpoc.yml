@@ -22,7 +22,7 @@ jobs:
 
         ${GITHUB_WORKSPACE}/sl --version
         ${GITHUB_WORKSPACE}/sl analyze --strict --wait \
-          --app Qwiet-python-GH \
+          --app Qwiet-python-GH2 \
           --tag branch=${{ github.head_ref }} \
          
       env:
@@ -42,7 +42,7 @@ jobs:
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
     - name: Validate Build Rules
       run: |
-        ${GITHUB_WORKSPACE}/sl check-analysis --app Qwiet-python-GH \
+        ${GITHUB_WORKSPACE}/sl check-analysis --app Qwiet-python-GH2 \
             --github-pr-number=${{github.event.number}} \
             --github-pr-user=${{ github.repository_owner }} \
             --github-pr-repo=${{ github.event.repository.name }} \
