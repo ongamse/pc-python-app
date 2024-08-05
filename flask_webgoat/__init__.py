@@ -8,16 +8,13 @@ DB_FILENAME = "database.db"
 
 
 def query_db(query, args=(), one=False, commit=False):
-    with sqlite3.connect(DB_FILENAME) as conn:
-        # vulnerability: Sensitive Data Exposure
-        conn.set_trace_callback(print)
-        cur = conn.cursor().execute(query, args)
-        if commit:
-            conn.commit()
-        return cur.fetchone() if one else cur.fetchall()
+	def query_db(query, args=(), one=False, commit=False):
+	    with sqlite3.connect(DB_FILENAME) as conn:
+	        cur = conn.cursor().execute(query, args)
+	        if commit:
+	            conn.commit()
+	        return cur.fetchone() if one else cur.fetchall()
 
-
-def create_app():
     app = Flask(__name__)
     app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
 
@@ -49,3 +46,4 @@ def create_app():
         app.register_blueprint(ui.bp)
         app.register_blueprint(users.bp)
         return app
+
