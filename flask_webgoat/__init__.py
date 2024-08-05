@@ -1,13 +1,12 @@
-import os
-import sqlite3
-from pathlib import Path
+	import os
+	import sqlite3
+	from pathlib import Path
 
-from flask import Flask, g
+	from flask import Flask, g
 
-DB_FILENAME = "database.db"
+	DB_FILENAME = "database.db"
 
 
-def query_db(query, args=(), one=False, commit=False):
 	def query_db(query, args=(), one=False, commit=False):
 	    with sqlite3.connect(DB_FILENAME) as conn:
 	        cur = conn.cursor().execute(query, args)
@@ -15,35 +14,39 @@ def query_db(query, args=(), one=False, commit=False):
 	            conn.commit()
 	        return cur.fetchone() if one else cur.fetchall()
 
-    app = Flask(__name__)
-    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
 
-    db_path = Path(DB_FILENAME)
-    if db_path.exists():
-        db_path.unlink()
+	def create_app():
+	    app = Flask(__name__)
+	    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
 
-    conn = sqlite3.connect(DB_FILENAME)
-    create_table_query = """CREATE TABLE IF NOT EXISTS user
-    (id INTEGER PRIMARY KEY, username TEXT, password TEXT, access_level INTEGER)"""
-    conn.execute(create_table_query)
+	    db_path = Path(DB_FILENAME)
+	    if db_path.exists():
+	        db_path.unlink()
 
-    insert_admin_query = """INSERT INTO user (id, username, password, access_level)
-    VALUES (1, 'admin', 'maximumentropy', 0)"""
-    conn.execute(insert_admin_query)
-    conn.commit()
-    conn.close()
+	    conn = sqlite3.connect(DB_FILENAME)
+	    create_table_query = """CREATE TABLE IF NOT EXISTS user
+	    (id INTEGER PRIMARY KEY, username TEXT, password TEXT, access_level INTEGER)"""
+	    conn.execute(create_table_query)
 
-    with app.app_context():
-        from . import actions
-        from . import auth
-        from . import status
-        from . import ui
-        from . import users
+	    insert_admin_query = """INSERT INTO user (id, username, password, access_level)
+	    VALUES (1, 'admin', 'maximumentropy', 0)"""
+	    conn.execute(insert_admin_query)
+	    conn.commit()
+	    conn.close()
 
-        app.register_blueprint(actions.bp)
-        app.register_blueprint(auth.bp)
-        app.register_blueprint(status.bp)
-        app.register_blueprint(ui.bp)
-        app.register_blueprint(users.bp)
-        return app
+	    with app.app_context():
+	        from . import actions
+	        from . import auth
+	        from . import status
+	        from . import ui
+	        from . import users
+
+	        app.register_blueprint(actions.bp)
+	        app.register_blueprint(auth.bp)
+	        app.register_blueprint(status.bp)
+	        app.register_blueprint(ui.bp)
+	        app.register_blueprint(users.bp)
+	        return app
+
+
 
