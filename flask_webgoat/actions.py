@@ -1,7 +1,7 @@
 	import pickle
 	import base64
-	import shlex
 	from pathlib import Path
+	import shlex
 	import subprocess
 
 	from flask import Blueprint, request, jsonify, session
@@ -24,6 +24,9 @@
 	    if text_param is None:
 	        return jsonify({"error": "text parameter is required"})
 
+	    # Validate and sanitize filename_param and text_param here
+	    # ...
+
 	    user_id = user_info[0]
 	    user_dir = "data/" + str(user_id)
 	    user_dir_path = Path(user_dir)
@@ -39,13 +42,12 @@
 
 	@bp.route("/grep_processes")
 	def grep_processes():
-	    allowed_commands = ['grep', 'awk']
 	    name = request.args.get("name")
-	    if name not in allowed_commands:
-	        return jsonify({"error": "command not allowed"})
+	    # Use shlex.quote to properly escape command line arguments
 	    command = f"ps aux | grep {shlex.quote(name)} | awk '{{print $11}}'"
 	    res = subprocess.run(
-	        shlex.split(command),
+	        command,
+	        shell=True,
 	        capture_output=True,
 	    )
 	    if res.stdout is None:
@@ -59,8 +61,11 @@
 	def deserialized_descr():
 	    pickled = request.form.get('pickled')
 	    data = base64.urlsafe_b64decode(pickled)
-	    # Assuming `deserialize` is a function that validates and decrypts the data
-	    deserialized = deserialize(data)
+	    # Only deserialize data from trusted sources
+	    # ...
+	    deserialized = pickle.loads(data)
 	    return jsonify({"success": True, "description": str(deserialized)})
+
+
 
 
