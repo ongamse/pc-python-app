@@ -9,15 +9,15 @@ DB_FILENAME = "database.db"
 
 def query_db(query, args=(), one=False, commit=False):
 	import sqlite3
-
-	DB_FILENAME = 'webgoat.db'
+	from flask import current_app
 
 	def query_db(query, args=(), one=False, commit=False):
-	    with sqlite3.connect(DB_FILENAME) as conn:
+	    with sqlite3.connect(current_app.config['DATABASE']) as conn:
 	        cur = conn.cursor().execute(query, args)
 	        if commit:
 	            conn.commit()
 	        return cur.fetchone() if one else cur.fetchall()
+
 
     app = Flask(__name__)
     app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
@@ -50,4 +50,5 @@ def query_db(query, args=(), one=False, commit=False):
         app.register_blueprint(ui.bp)
         app.register_blueprint(users.bp)
         return app
+
 
