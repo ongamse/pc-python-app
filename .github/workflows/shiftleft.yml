@@ -22,7 +22,7 @@ jobs:
 
         ${GITHUB_WORKSPACE}/sl --version
         ${GITHUB_WORKSPACE}/sl analyze --strict --wait \
-          --app QwietAI-python-Agentic \
+          --app QwietAI-python-AgenticAI \
           --tag branch=${{ github.head_ref }} \
           --pythonsrc --container 18fgsa/s3-resource $(pwd)
       env:
@@ -42,7 +42,7 @@ jobs:
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
     - name: Validate Build Rules
       run: |
-        ${GITHUB_WORKSPACE}/sl check-analysis --app QwietAI-python-Agentic \
+        ${GITHUB_WORKSPACE}/sl check-analysis --app QwietAI-python-AgenticAI \
             --github-pr-number=${{github.event.number}} \
             --github-pr-user=${{ github.repository_owner }} \
             --github-pr-repo=${{ github.event.repository.name }} \
