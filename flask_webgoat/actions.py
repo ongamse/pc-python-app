@@ -1,4 +1,4 @@
-import pickle
+import json
 import base64
 from pathlib import Path
 import subprocess
@@ -29,10 +29,19 @@ def log_entry():
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    # Sanitize filename: strip any directory components to prevent path traversal
+    safe_name = Path(filename_param).name
+    if not safe_name or safe_name in (".", ".."):
+        return jsonify({"error": "invalid filename"})
+
+    filename = safe_name + ".txt"
+    path = (user_dir_path / filename).resolve()
+
+    # Verify resolved path is still within the user directory
+    if not str(path).startswith(str(user_dir_path.resolve()) + "/"):
+        return jsonify({"error": "invalid filename"})
+
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
@@ -40,16 +49,23 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    # Run ps without shell; filter and extract command column in Python
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    lines = out.split("\n")
+    # Replicate "grep <name> | awk '{print $11}'" in Python
+    names = []
+    for line in lines:
+        if name and name in line:
+            fields = line.split()
+            if len(fields) >= 11:
+                names.append(fields[10])
     return jsonify({"success": True, "names": names})
 
 
@@ -57,6 +73,5 @@ def grep_processes():
 def deserialized_descr():
     pickled = request.form.get('pickled')
     data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    deserialized = json.loads(data)
     return jsonify({"success": True, "description": str(deserialized)})
