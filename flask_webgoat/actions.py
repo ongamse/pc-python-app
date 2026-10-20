@@ -29,10 +29,19 @@ def log_entry():
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    # Sanitize filename: strip any directory components to prevent path traversal
+    safe_name = Path(filename_param).name
+    if not safe_name or safe_name in (".", ".."):
+        return jsonify({"error": "invalid filename"})
+
+    filename = safe_name + ".txt"
+    path = (user_dir_path / filename).resolve()
+
+    # Verify resolved path is still within the user directory
+    if not str(path).startswith(str(user_dir_path.resolve()) + "/"):
+        return jsonify({"error": "invalid filename"})
+
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
