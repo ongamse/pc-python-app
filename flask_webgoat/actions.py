@@ -45,16 +45,23 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if not name:
+        return jsonify({"error": "name parameter is required"})
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    lines = out.split("\n")
+    names = []
+    for line in lines:
+        if name in line:
+            fields = line.split()
+            if len(fields) >= 11:
+                names.append(fields[10])
     return jsonify({"success": True, "names": names})
 
 
