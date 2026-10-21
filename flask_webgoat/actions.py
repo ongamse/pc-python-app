@@ -1,3 +1,4 @@
+import os
 import pickle
 import base64
 from pathlib import Path
@@ -29,10 +30,14 @@ def log_entry():
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    safe_name = os.path.basename(filename_param)
+    if not safe_name:
+        return jsonify({"error": "invalid filename"})
+    filename = safe_name + ".txt"
+    path = Path(user_dir) / filename
+    if not path.resolve().is_relative_to(Path(user_dir).resolve()):
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
