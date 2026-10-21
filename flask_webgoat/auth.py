@@ -1,5 +1,13 @@
+from urllib.parse import urlparse
+
 from flask import Blueprint, request, jsonify, session, redirect
 from . import query_db
+
+
+def _is_safe_redirect_url(target):
+    """Return True only if target is a relative path (no external host)."""
+    parsed = urlparse(target)
+    return parsed.scheme == "" and parsed.netloc == ""
 
 bp = Blueprint("auth", __name__)
 
@@ -38,7 +46,8 @@ def login_and_redirect():
     query = "SELECT id, username, access_level FROM user WHERE username = ? AND password = ?"
     result = query_db(query, (username, password), True)
     if result is None:
-        # vulnerability: Open Redirect
+        if not _is_safe_redirect_url(url):
+            return redirect("/")
         return redirect(url)
     session["user_info"] = (result[0], result[1], result[2])
     return jsonify({"success": True})
