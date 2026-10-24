@@ -1,5 +1,5 @@
-import pickle
-import base64
+import os
+import json
 from pathlib import Path
 import subprocess
 
@@ -29,10 +29,14 @@ def log_entry():
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    safe_name = os.path.basename(filename_param)
+    if not safe_name:
+        return jsonify({"error": "invalid filename"})
+    filename = safe_name + ".txt"
+    path = (user_dir_path / filename).resolve()
+    if not path.is_relative_to(user_dir_path.resolve()):
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
@@ -40,23 +44,28 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if not name:
+        return jsonify({"error": "name parameter is required"})
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
         capture_output=True,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    names = []
+    for line in out.split("\n"):
+        if name in line:
+            parts = line.split()
+            if len(parts) >= 11:
+                names.append(parts[10])
     return jsonify({"success": True, "names": names})
 
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    data = request.form.get('data')
+    if data is None:
+        return jsonify({"error": "data parameter is required"})
+    deserialized = json.loads(data)
     return jsonify({"success": True, "description": str(deserialized)})
