@@ -19,7 +19,8 @@ def query_db(query, args=(), one=False, commit=False):
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
+    # ROTATE: the previous secret_key was committed to version control and must be revoked/rotated
+    app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32).hex())
 
     db_path = Path(DB_FILENAME)
     if db_path.exists():
