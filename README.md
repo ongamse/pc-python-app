@@ -22,8 +22,11 @@ web framework.
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
+export FLASK_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 FLASK_APP=run.py flask run
 ```
+
+`FLASK_SECRET_KEY` is required; the app refuses to start without it.
 
 ### Vulnerabilities
 
