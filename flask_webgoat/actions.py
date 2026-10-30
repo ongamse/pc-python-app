@@ -1,5 +1,5 @@
-import pickle
 import base64
+import json
 from pathlib import Path
 import subprocess
 
@@ -30,7 +30,10 @@ def log_entry():
         user_dir_path.mkdir()
 
     filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    base_path = user_dir_path.resolve()
+    path = (base_path / filename).resolve()
+    if path.parent != base_path:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
         # vulnerability: Directory Traversal
         open_file.write(text_param)
@@ -40,23 +43,39 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
-    res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
-        capture_output=True,
-    )
+    if name is None:
+        return jsonify({"error": "name parameter is required"})
+    try:
+        res = subprocess.run(
+            ["ps", "aux"],
+            shell=False,
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return jsonify({"error": "unable to list processes"})
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
-    out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    out = res.stdout.decode("utf-8", errors="replace")
+    names = []
+    for line in out.splitlines():
+        if name not in line:
+            continue
+        fields = line.split()
+        # equivalent of awk '{print $11}': the command column of `ps aux`
+        if len(fields) >= 11:
+            names.append(fields[10])
     return jsonify({"success": True, "names": names})
 
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    pickled = request.form.get("pickled")
+    if pickled is None:
+        return jsonify({"error": "pickled parameter is required"})
+    try:
+        data = base64.urlsafe_b64decode(pickled)
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, TypeError):
+        return jsonify({"error": "pickled parameter must be base64-encoded JSON"})
     return jsonify({"success": True, "description": str(deserialized)})
