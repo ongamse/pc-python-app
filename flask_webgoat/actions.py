@@ -30,7 +30,10 @@ def log_entry():
         user_dir_path.mkdir()
 
     filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    base_path = user_dir_path.resolve()
+    path = (base_path / filename).resolve()
+    if path.parent != base_path:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
         # vulnerability: Directory Traversal
         open_file.write(text_param)
