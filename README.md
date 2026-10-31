@@ -22,8 +22,11 @@ web framework.
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-FLASK_APP=run.py flask run
+FLASK_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" FLASK_APP=run.py flask run
 ```
+
+`FLASK_SECRET_KEY` sets the session signing key. If unset, a random key is
+generated at startup (sessions are reset on each restart).
 
 ### Vulnerabilities
 
