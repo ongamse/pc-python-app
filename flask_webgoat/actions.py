@@ -1,4 +1,4 @@
-import pickle
+import json
 import base64
 from pathlib import Path
 import subprocess
@@ -70,8 +70,32 @@ def grep_processes():
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    # The payload is a urlsafe-base64 encoded JSON document (a safe data-only
+    # format); arbitrary object deserialization is never performed.
+    encoded = request.form.get("pickled")
+    if not encoded:
+        return jsonify({"error": "pickled parameter is required"})
+    try:
+        data = base64.urlsafe_b64decode(encoded)
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return jsonify({"error": "invalid payload: expected base64 encoded JSON"})
+    if not _is_plain_json_value(deserialized):
+        return jsonify({"error": "invalid payload structure"})
     return jsonify({"success": True, "description": str(deserialized)})
+
+
+def _is_plain_json_value(value, depth=0):
+    """Validate that a decoded value only contains plain JSON types."""
+    if depth > 20:
+        return False
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, list):
+        return all(_is_plain_json_value(v, depth + 1) for v in value)
+    if isinstance(value, dict):
+        return all(
+            isinstance(k, str) and _is_plain_json_value(v, depth + 1)
+            for k, v in value.items()
+        )
+    return False
