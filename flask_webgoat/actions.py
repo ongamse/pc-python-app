@@ -24,15 +24,28 @@ def log_entry():
         return jsonify({"error": "text parameter is required"})
 
     user_id = user_info[0]
-    user_dir = "data/" + str(user_id)
-    user_dir_path = Path(user_dir)
+    user_dir_path = Path("data") / str(user_id)
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    # Only a plain file name is allowed: no path separators, no traversal,
+    # no absolute paths, no NUL bytes.
+    if (
+        not filename_param
+        or "/" in filename_param
+        or "\\" in filename_param
+        or "\x00" in filename_param
+        or filename_param in (".", "..")
+        or Path(filename_param).is_absolute()
+    ):
+        return jsonify({"error": "invalid filename"}), 400
+
+    base_dir = user_dir_path.resolve()
+    path = (base_dir / (filename_param + ".txt")).resolve()
+    # Confine the resolved path to the user's directory (also defeats symlinks).
+    if path.parent != base_dir:
+        return jsonify({"error": "invalid filename"}), 400
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
