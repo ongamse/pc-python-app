@@ -19,7 +19,10 @@ def query_db(query, args=(), one=False, commit=False):
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
+    # Load the session signing key from the environment. If unset, fall back to
+    # a random per-process key (sessions reset on restart / differ per worker).
+    # The previously committed key must be treated as compromised and rotated.
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex()
 
     db_path = Path(DB_FILENAME)
     if db_path.exists():
