@@ -25,6 +25,10 @@ pip install -r requirements.txt
 FLASK_APP=run.py flask run
 ```
 
+Optionally set `FLASK_SECRET_KEY` to a stable random value so sessions survive
+restarts and work across multiple workers. If unset, a random per-process key
+is generated.
+
 ### Vulnerabilities
 
 This project contains the following vulnerabilities:
