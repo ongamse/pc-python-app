@@ -1,4 +1,4 @@
-import pickle
+import json
 import base64
 from pathlib import Path
 import subprocess
@@ -30,9 +30,16 @@ def log_entry():
         user_dir_path.mkdir()
 
     filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    # Canonicalize and confine the target to the user's own directory.
+    try:
+        base_dir = user_dir_path.resolve()
+        path = (base_dir / filename).resolve()
+        path.relative_to(base_dir)
+    except (ValueError, OSError):
+        return jsonify({"error": "invalid filename"})
+    if path.parent != base_dir:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
@@ -40,23 +47,36 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if not name:
+        return jsonify({"error": "name parameter is required"})
+    # No shell: fixed argv, and the filtering is done in Python so the
+    # user-supplied value is never interpreted as a command or an option.
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    names = []
+    for line in out.split("\n"):
+        if name in line:
+            fields = line.split()
+            names.append(fields[10] if len(fields) > 10 else "")
+    names.append("")
     return jsonify({"success": True, "names": names})
 
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    serialized = request.form.get('pickled')
+    if serialized is None:
+        return jsonify({"error": "pickled parameter is required"})
+    # Safe data-only format (JSON); never unpickle untrusted input.
+    try:
+        data = base64.urlsafe_b64decode(serialized)
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, TypeError):
+        return jsonify({"error": "invalid serialized data"})
     return jsonify({"success": True, "description": str(deserialized)})

@@ -1,4 +1,5 @@
 import os
+import secrets
 import sqlite3
 from pathlib import Path
 
@@ -19,7 +20,10 @@ def query_db(query, args=(), one=False, commit=False):
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
+    # The previous hard-coded key remains in git history and must be rotated.
+    # Load the session signing key from the environment; fall back to a
+    # per-process random key (sessions reset on restart) when it is unset.
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 
     db_path = Path(DB_FILENAME)
     if db_path.exists():
