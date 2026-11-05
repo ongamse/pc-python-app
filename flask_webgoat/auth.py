@@ -1,7 +1,21 @@
+from urllib.parse import urlsplit
+
 from flask import Blueprint, request, jsonify, session, redirect
 from . import query_db
 
 bp = Blueprint("auth", __name__)
+
+
+def _safe_redirect_target(target, default="/"):
+    """Allow only same-site relative paths; otherwise return the default."""
+    if not target or any(ord(c) < 0x20 or ord(c) == 0x7F for c in target):
+        return default
+    if "\\" in target or not target.startswith("/") or target.startswith("//"):
+        return default
+    parsed = urlsplit(target)
+    if parsed.scheme or parsed.netloc:
+        return default
+    return target
 
 
 @bp.route("/login", methods=["POST"])
@@ -38,7 +52,6 @@ def login_and_redirect():
     query = "SELECT id, username, access_level FROM user WHERE username = ? AND password = ?"
     result = query_db(query, (username, password), True)
     if result is None:
-        # vulnerability: Open Redirect
-        return redirect(url)
+        return redirect(_safe_redirect_target(url))
     session["user_info"] = (result[0], result[1], result[2])
     return jsonify({"success": True})
