@@ -22,8 +22,12 @@ web framework.
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
+FLASK_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
 FLASK_APP=run.py flask run
 ```
+
+`FLASK_SECRET_KEY` signs session cookies. If it is unset, a random ephemeral
+key is generated at startup and sessions are invalidated on restart.
 
 ### Vulnerabilities
 
