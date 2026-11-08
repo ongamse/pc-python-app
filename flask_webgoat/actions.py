@@ -30,9 +30,12 @@ def log_entry():
         user_dir_path.mkdir()
 
     filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    base_dir = user_dir_path.resolve()
+    path = (base_dir / filename).resolve()
+    # Confine writes to the user's own directory (reject "..", separators, absolute paths).
+    if path.parent != base_dir:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
