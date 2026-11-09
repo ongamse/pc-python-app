@@ -1,5 +1,6 @@
-import pickle
+import json
 import base64
+import re
 from pathlib import Path
 import subprocess
 
@@ -30,7 +31,10 @@ def log_entry():
         user_dir_path.mkdir()
 
     filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    base_dir = user_dir_path.resolve()
+    path = (base_dir / filename).resolve()
+    if path.parent != base_dir:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
         # vulnerability: Directory Traversal
         open_file.write(text_param)
@@ -40,23 +44,38 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None or not re.fullmatch(r"[A-Za-z0-9_.\-]{1,64}", name):
+        return jsonify({"error": "invalid name parameter"})
+    # No shell: run ps with a fixed argv and filter/extract in Python.
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
+        check=False,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    names = []
+    for line in out.split("\n"):
+        if name not in line:
+            continue
+        fields = line.split()
+        if len(fields) >= 11:
+            names.append(fields[10])
     return jsonify({"success": True, "names": names})
 
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
     pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    if pickled is None:
+        return jsonify({"error": "pickled parameter is required"})
+    # Safe data-only format: base64(urlsafe) encoded JSON, never pickle.
+    try:
+        data = base64.urlsafe_b64decode(pickled)
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, TypeError):
+        # binascii.Error and UnicodeDecodeError / JSONDecodeError are ValueErrors
+        return jsonify({"error": "invalid serialized data"})
     return jsonify({"success": True, "description": str(deserialized)})
