@@ -1,5 +1,6 @@
 import pickle
 import base64
+import re
 from pathlib import Path
 import subprocess
 
@@ -46,16 +47,21 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", name):
+        return jsonify({"error": "invalid name parameter"})
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    names = []
+    for line in out.split("\n"):
+        if name in line:
+            fields = line.split()
+            names.append(fields[10] if len(fields) > 10 else "")
     return jsonify({"success": True, "names": names})
 
 
