@@ -1,13 +1,28 @@
+import os
+
+from flask import request
 from flask_webgoat import create_app
 
 app = create_app()
 
+ALLOWED_ORIGINS = frozenset(
+    o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+    if o.strip() and o.strip() != '*'
+)
+
 @app.after_request
 def add_csp_headers(response):
-    # vulnerability: Broken Access Control
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    # vulnerability: Security Misconfiguration
-    response.headers['Content-Security-Policy'] = "script-src 'self' 'unsafe-inline'"
+    # CORS: no ACAO header by default (same-origin only); only origins
+    # explicitly listed in CORS_ALLOWED_ORIGINS (comma-separated) are echoed.
+    origin = request.headers.get('Origin')
+    if origin and origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers.add('Vary', 'Origin')
+    # Strict CSP: no inline/eval scripts; templates contain no inline script.
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; script-src 'self'; object-src 'none'; "
+        "base-uri 'self'; frame-ancestors 'self'"
+    )
     return response
 
 if __name__ == '__main__':
