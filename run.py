@@ -20,8 +20,8 @@ def add_csp_headers(response):
     if origin and origin in ALLOWED_ORIGINS:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers.add('Vary', 'Origin')
-    # vulnerability: Security Misconfiguration
-    response.headers['Content-Security-Policy'] = "script-src 'self' 'unsafe-inline'"
+    # Only same-origin scripts; inline scripts/handlers are not permitted.
+    response.headers['Content-Security-Policy'] = "script-src 'self'"
     return response
 
 if __name__ == '__main__':
