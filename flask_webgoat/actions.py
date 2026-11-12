@@ -1,5 +1,5 @@
-import pickle
 import base64
+import json
 import re
 from pathlib import Path
 import subprocess
@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 bp = Blueprint("actions", __name__)
 
 PROCESS_NAME_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+MAX_SERIALIZED_LEN = 8192
 
 
 @bp.route("/message", methods=["POST"])
@@ -70,8 +71,20 @@ def grep_processes():
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    encoded = request.form.get("serialized")
+    if encoded is None:
+        encoded = request.form.get("pickled")
+    if not encoded:
+        return jsonify({"error": "serialized parameter is required"}), 400
+    if len(encoded) > MAX_SERIALIZED_LEN:
+        return jsonify({"error": "serialized parameter too large"}), 400
+    try:
+        padded = encoded + "=" * (-len(encoded) % 4)
+        data = base64.urlsafe_b64decode(padded.encode("ascii"))
+        # JSON only: parsing cannot instantiate arbitrary objects.
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, UnicodeError):
+        return jsonify({"error": "invalid serialized data"}), 400
+    if not isinstance(deserialized, (dict, list, str, int, float, bool)):
+        return jsonify({"error": "invalid serialized data"}), 400
     return jsonify({"success": True, "description": str(deserialized)})
