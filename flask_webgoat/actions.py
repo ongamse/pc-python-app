@@ -1,5 +1,6 @@
 import pickle
 import base64
+import re
 from pathlib import Path
 import subprocess
 
@@ -7,6 +8,8 @@ from flask import Blueprint, request, jsonify, session
 from werkzeug.utils import secure_filename
 
 bp = Blueprint("actions", __name__)
+
+PROCESS_NAME_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 
 
 @bp.route("/message", methods=["POST"])
@@ -45,16 +48,23 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None or not PROCESS_NAME_RE.fullmatch(name):
+        return jsonify({"error": "invalid name parameter"})
+    # No shell: fixed argv, filtering done in Python on the validated name.
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
+        check=False,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
-    out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    out = res.stdout.decode("utf-8", errors="replace")
+    names = []
+    for line in out.split("\n"):
+        if name in line:
+            fields = line.split()
+            names.append(fields[10] if len(fields) > 10 else "")
     return jsonify({"success": True, "names": names})
 
 
