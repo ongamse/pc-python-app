@@ -1,11 +1,16 @@
-import pickle
 import base64
+import json
+import re
 from pathlib import Path
 import subprocess
 
 from flask import Blueprint, request, jsonify, session
+from werkzeug.utils import secure_filename
 
 bp = Blueprint("actions", __name__)
+
+PROCESS_NAME_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+MAX_SERIALIZED_LEN = 8192
 
 
 @bp.route("/message", methods=["POST"])
@@ -29,10 +34,14 @@ def log_entry():
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    safe_name = secure_filename(filename_param)
+    if not safe_name:
+        return jsonify({"error": "invalid filename"})
+    base_dir = user_dir_path.resolve()
+    path = (base_dir / (safe_name + ".txt")).resolve()
+    if path.parent != base_dir:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
@@ -40,23 +49,42 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None or not PROCESS_NAME_RE.fullmatch(name):
+        return jsonify({"error": "invalid name parameter"})
+    # No shell: fixed argv, filtering done in Python on the validated name.
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
+        check=False,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
-    out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    out = res.stdout.decode("utf-8", errors="replace")
+    names = []
+    for line in out.split("\n"):
+        if name in line:
+            fields = line.split()
+            names.append(fields[10] if len(fields) > 10 else "")
     return jsonify({"success": True, "names": names})
 
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    encoded = request.form.get("serialized")
+    if encoded is None:
+        encoded = request.form.get("pickled")
+    if not encoded:
+        return jsonify({"error": "serialized parameter is required"}), 400
+    if len(encoded) > MAX_SERIALIZED_LEN:
+        return jsonify({"error": "serialized parameter too large"}), 400
+    try:
+        padded = encoded + "=" * (-len(encoded) % 4)
+        data = base64.urlsafe_b64decode(padded.encode("ascii"))
+        # JSON only: parsing cannot instantiate arbitrary objects.
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, UnicodeError):
+        return jsonify({"error": "invalid serialized data"}), 400
+    if not isinstance(deserialized, (dict, list, str, int, float, bool)):
+        return jsonify({"error": "invalid serialized data"}), 400
     return jsonify({"success": True, "description": str(deserialized)})
