@@ -42,16 +42,27 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None:
+        return jsonify({"error": "name parameter is required"})
+    # Fixed argv, no shell: request data is never interpreted by a shell.
+    # Filtering (grep) and column extraction (awk '{print $11}') are done
+    # in Python instead of in a shell pipeline.
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
+        check=False,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
     out = res.stdout.decode("utf-8")
-    names = out.split("\n")
+    matches = []
+    for line in out.splitlines():
+        if name not in line:
+            continue
+        fields = line.split()
+        matches.append(fields[10] if len(fields) > 10 else "")
+    names = "".join(match + "\n" for match in matches).split("\n")
     return jsonify({"success": True, "names": names})
 
 
