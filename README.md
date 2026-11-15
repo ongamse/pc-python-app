@@ -30,6 +30,11 @@ Set `FLASK_SECRET_KEY` to a long random value to sign sessions (for example,
 If it is unset, a random per-process key is generated, so sessions are
 invalidated on restart and are not shared between workers.
 
+By default no cross-origin (CORS) access is granted. To allow specific origins,
+set `CORS_ALLOWED_ORIGINS` to a comma-separated list of exact origins (for
+example `https://app.example.com,https://admin.example.com`). A wildcard `*`
+is ignored.
+
 ### Vulnerabilities
 
 This project contains the following vulnerabilities:
@@ -40,7 +45,6 @@ This project contains the following vulnerabilities:
 - Directory Traversal
 - Open Redirect
 - Sensitive Data Exposure
-- Broken Access Control
 - Security Misconfiguration
 
 You can find each one in the codebase by grepping for the string
@@ -55,6 +59,5 @@ $ grep vulnerability . -R -n | grep -v README
 ./flask_webgoat/actions.py:35:        # vulnerability: Directory Traversal
 ./flask_webgoat/auth.py:45:        # vulnerability: Open Redirect
 ./flask_webgoat/__init__.py:12:        # vulnerability: Sensitive Data Exposure
-./run.py:7:    # vulnerability: Broken Access Control
-./run.py:9:    # vulnerability: Security Misconfiguration
+./run.py:24:    # vulnerability: Security Misconfiguration
 ```
