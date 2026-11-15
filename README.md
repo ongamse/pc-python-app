@@ -25,6 +25,11 @@ pip install -r requirements.txt
 FLASK_APP=run.py flask run
 ```
 
+Set `FLASK_SECRET_KEY` to a long random value to sign sessions (for example,
+`export FLASK_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"`).
+If it is unset, a random per-process key is generated, so sessions are
+invalidated on restart and are not shared between workers.
+
 ### Vulnerabilities
 
 This project contains the following vulnerabilities:
