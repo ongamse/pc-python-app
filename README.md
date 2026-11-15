@@ -59,5 +59,4 @@ $ grep vulnerability . -R -n | grep -v README
 ./flask_webgoat/actions.py:35:        # vulnerability: Directory Traversal
 ./flask_webgoat/auth.py:45:        # vulnerability: Open Redirect
 ./flask_webgoat/__init__.py:12:        # vulnerability: Sensitive Data Exposure
-./run.py:24:    # vulnerability: Security Misconfiguration
 ```
