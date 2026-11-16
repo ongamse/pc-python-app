@@ -22,8 +22,11 @@ web framework.
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-FLASK_APP=run.py flask run
+FLASK_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" FLASK_APP=run.py flask run
 ```
+
+Set `FLASK_SECRET_KEY` to a long random value to keep sessions valid across
+restarts. If it is unset, a random per-process key is generated at startup.
 
 ### Vulnerabilities
 
