@@ -28,6 +28,11 @@ FLASK_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" F
 `FLASK_SECRET_KEY` (or `SECRET_KEY`) sets the session signing key. If unset, a
 random key is generated at startup and sessions reset on restart.
 
+`CORS_ALLOWED_ORIGINS` is an optional comma-separated list of trusted origins
+(e.g. `https://app.example.com,https://admin.example.com`). Only requests whose
+`Origin` header exactly matches an entry receive `Access-Control-Allow-Origin`.
+If unset, no CORS header is sent (same-origin only). `*` is ignored.
+
 ### Vulnerabilities
 
 This project contains the following vulnerabilities:
