@@ -25,6 +25,10 @@ pip install -r requirements.txt
 FLASK_APP=run.py flask run
 ```
 
+Set `FLASK_SECRET_KEY` in the environment to provide the session signing key.
+If unset, a random key is generated at startup (sessions do not survive a
+restart and are not shared between worker processes).
+
 ### Vulnerabilities
 
 This project contains the following vulnerabilities:
