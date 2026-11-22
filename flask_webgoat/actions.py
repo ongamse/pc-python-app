@@ -1,4 +1,4 @@
-import pickle
+import json
 import base64
 from pathlib import Path
 import subprocess
@@ -67,8 +67,14 @@ def grep_processes():
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
+    # The field name is kept for API compatibility; the payload is base64
+    # encoded JSON, parsed with a data-only loader (never pickle).
     pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    if pickled is None:
+        return jsonify({"error": "pickled parameter is required"})
+    try:
+        data = base64.urlsafe_b64decode(pickled)
+        deserialized = json.loads(data.decode("utf-8"))
+    except ValueError:
+        return jsonify({"error": "pickled must be base64-encoded JSON"})
     return jsonify({"success": True, "description": str(deserialized)})
