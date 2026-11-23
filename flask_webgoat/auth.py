@@ -1,7 +1,21 @@
+from urllib.parse import urlparse
+
 from flask import Blueprint, request, jsonify, session, redirect
 from . import query_db
 
 bp = Blueprint("auth", __name__)
+
+
+def _safe_local_path(target):
+    """Return target if it is a same-site relative path, else None."""
+    if not target or not target.startswith("/") or target.startswith("//"):
+        return None
+    if "\\" in target or any(ord(c) < 32 or ord(c) == 127 for c in target):
+        return None
+    parsed = urlparse(target)
+    if parsed.scheme or parsed.netloc:
+        return None
+    return target
 
 
 @bp.route("/login", methods=["POST"])
@@ -14,12 +28,8 @@ def login():
             400,
         )
 
-    # vulnerability: SQL Injection
-    query = (
-        "SELECT id, username, access_level FROM user WHERE username = '%s' AND password = '%s'"
-        % (username, password)
-    )
-    result = query_db(query, [], True)
+    query = "SELECT id, username, access_level FROM user WHERE username = ? AND password = ?"
+    result = query_db(query, (username, password), True)
     if result is None:
         return jsonify({"bad_login": True}), 400
     session["user_info"] = (result[0], result[1], result[2])
@@ -39,10 +49,13 @@ def login_and_redirect():
             400,
         )
 
+    safe_path = _safe_local_path(url)
+    if safe_path is None:
+        return jsonify({"error": "url must be a local path"}), 400
+
     query = "SELECT id, username, access_level FROM user WHERE username = ? AND password = ?"
     result = query_db(query, (username, password), True)
     if result is None:
-        # vulnerability: Open Redirect
-        return redirect(url)
+        return redirect(safe_path)
     session["user_info"] = (result[0], result[1], result[2])
     return jsonify({"success": True})

@@ -1,9 +1,10 @@
-import pickle
 import base64
+import json
 from pathlib import Path
 import subprocess
 
 from flask import Blueprint, request, jsonify, session
+from werkzeug.utils import secure_filename
 
 bp = Blueprint("actions", __name__)
 
@@ -29,10 +30,15 @@ def log_entry():
     if not user_dir_path.exists():
         user_dir_path.mkdir()
 
-    filename = filename_param + ".txt"
-    path = Path(user_dir + "/" + filename)
+    safe_name = secure_filename(filename_param)
+    if not safe_name:
+        return jsonify({"error": "invalid filename"})
+    filename = safe_name + ".txt"
+    base_dir = user_dir_path.resolve()
+    path = (base_dir / filename).resolve()
+    if path.parent != base_dir:
+        return jsonify({"error": "invalid filename"})
     with path.open("w", encoding="utf-8") as open_file:
-        # vulnerability: Directory Traversal
         open_file.write(text_param)
     return jsonify({"success": True})
 
@@ -40,23 +46,37 @@ def log_entry():
 @bp.route("/grep_processes")
 def grep_processes():
     name = request.args.get("name")
-    # vulnerability: Remote Code Execution
+    if name is None:
+        return jsonify({"error": "name parameter is required"})
+    # No shell: run ps with a fixed argv and filter/extract the command
+    # column in Python so the user-supplied value never reaches a shell.
     res = subprocess.run(
-        ["ps aux | grep " + name + " | awk '{print $11}'"],
-        shell=True,
+        ["ps", "aux"],
+        shell=False,
         capture_output=True,
+        check=False,
     )
     if res.stdout is None:
         return jsonify({"error": "no stdout returned"})
-    out = res.stdout.decode("utf-8")
+    lines = res.stdout.decode("utf-8", errors="replace").split("\n")
+    out = ""
+    for line in lines:
+        if name in line:
+            fields = line.split()
+            out += (fields[10] if len(fields) > 10 else "") + "\n"
     names = out.split("\n")
     return jsonify({"success": True, "names": names})
 
 
 @bp.route("/deserialized_descr", methods=["POST"])
 def deserialized_descr():
-    pickled = request.form.get('pickled')
-    data = base64.urlsafe_b64decode(pickled)
-    # vulnerability: Insecure Deserialization
-    deserialized = pickle.loads(data)
+    payload = request.form.get("pickled")
+    if payload is None:
+        return jsonify({"error": "pickled parameter is required"})
+    # JSON is a data-only format: parsing it cannot execute code.
+    try:
+        data = base64.urlsafe_b64decode(payload)
+        deserialized = json.loads(data.decode("utf-8"))
+    except (ValueError, TypeError):
+        return jsonify({"error": "payload must be base64-encoded JSON"})
     return jsonify({"success": True, "description": str(deserialized)})
