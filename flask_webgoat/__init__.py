@@ -19,7 +19,9 @@ def query_db(query, args=(), one=False, commit=False):
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
+    # Set FLASK_SECRET_KEY to keep sessions valid across restarts/workers; the
+    # previously committed key is compromised and must not be reused.
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex()
 
     db_path = Path(DB_FILENAME)
     if db_path.exists():
