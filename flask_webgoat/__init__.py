@@ -19,7 +19,9 @@ def query_db(query, args=(), one=False, commit=False):
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "aeZ1iwoh2ree2mo0Eereireong4baitixaixu5Ee"
+    # The previously committed key is compromised (it remains in git history) and must not be reused.
+    # Set FLASK_SECRET_KEY; otherwise an ephemeral random key is used (sessions reset on restart).
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 
     db_path = Path(DB_FILENAME)
     if db_path.exists():
